@@ -4,7 +4,7 @@
 
 **Packet Route** is a network infrastructure simulation project designed to build a highly available and secure network environment. It focuses on interconnecting different routing protocols, ensuring gateway redundancy, and enforcing security policies using Cisco network devices.
 
-## � Project Context
+## 📅 Project Context
 * **Type**: Network Infrastructure / Simulation
 * **Tools Used**: Cisco Packet Tracer, Cisco IOS
 * **Key Concepts**: OSPF, EIGRP, HSRP, VLAN, ACL, Redistribution
@@ -34,7 +34,7 @@
 
 ---
 
-## �🚀 Troubleshooting & Issues
+## 🚀 Troubleshooting & Issues
 
 ### 1. HSRP Split-Brain Scenario
 * **Issue**: Both redundant routers claimed the "Active" state, causing IP conflicts and network instability.
