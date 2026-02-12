@@ -1,62 +1,124 @@
-# 🚀 11-Router 하이브리드 WAN 통합 프로젝트 (README)
+# Packet Route: Network Topology Simulation
 
-## 1\. 🎯 프로젝트 개요 (Project Overview)
+> **Enterprise-Grade Network Infrastructure Design & Simulation**
 
-본 프로젝트는 OSPF 멀티 에어리어(Multi-Area)와 EIGRP 자율 시스템(AS)을 통합하고, 중앙 집중식 NAT 및 HSRP 게이트웨이 이중화까지 구현한 **복합 라우팅 기반의 기업 내부망 구축** 시뮬레이션입니다.
+**Packet Route** is a network infrastructure simulation project designed to build a highly available and secure network environment. It focuses on interconnecting different routing protocols, ensuring gateway redundancy, and enforcing security policies using Cisco network devices.
 
-M\&A(인수합병) 등으로 인해 서로 다른 라우팅 프로토콜을 사용하는 기업 네트워크를 단일화하고, 고가용성(HA) 및 보안 정책을 적용하는 현업 시나리오를 목표로 합니다.
+## � Project Context
+* **Type**: Network Infrastructure / Simulation
+* **Tools Used**: Cisco Packet Tracer, Cisco IOS
+* **Key Concepts**: OSPF, EIGRP, HSRP, VLAN, ACL, Redistribution
 
-### 1.1. 📍 최종 아키텍처 (Final Architecture)
+---
 
-본 네트워크는 3개의 독립된 라우팅 도메인과 1개의 인터넷 게이트웨이로 구성됩니다.
+## 🏗️ Network Architecture & Design
 
-| 영역 | 장비 | 프로토콜 | 역할 |
+### 1. Protocol Redistribution (OSPF ↔ EIGRP)
+* **Goal**: Enable communication between different Autonomous Systems (AS).
+* **Implementation**: Configured **Route Redistribution** on the ASBR (Autonomous System Boundary Router).
+* **Result**: Successfully merged the OSPF domain and EIGRP domain, allowing full connectivity across the entire network infrastructure.
+
+### 2. Gateway Redundancy (HSRP)
+* **Goal**: Ensure High Availability (HA) and Load Balancing.
+* **Implementation**: Deployed **HSRP (Hot Standby Router Protocol)** using L3 Switches.
+    * Configured **Active/Standby** roles for different VLANs to distribute traffic load.
+* **Result**: Achieved failover capability where a standby gateway immediately takes over if the active gateway fails.
+
+### 3. Security & L2 Stability
+* **Access Control Lists (ACL)**:
+    * **Guest VLAN**: Restricted to Internet access only; blocked from internal network resources.
+    * **Network Separation**: Enforced strict traffic policies between VLANs.
+* **Native VLAN Configuration**:
+    * Changed Native VLAN to ID `999` across all switches.
+    * **Result**: Mitigated **VLAN Hopping attacks** and prevented L2 protocol inconsistencies.
+
+---
+
+## �🚀 Troubleshooting & Issues
+
+### 1. HSRP Split-Brain Scenario
+* **Issue**: Both redundant routers claimed the "Active" state, causing IP conflicts and network instability.
+* **Cause**: A mismatch in **Native VLAN** settings during the initial Router-on-a-Stick (ROAS) configuration caused HSRP Hello packets to be dropped.
+* **Solution**:
+    * Replaced the legacy Router architecture with **L3 Switches**.
+    * Migrated to **SVI (Switch Virtual Interface)** based routing.
+    * **Outcome**: Resolved the physical/functional constraints and established a stable logical topology.
+
+### 2. EIGRP Default Route Propagation Failure
+* **Issue**: PCs within the EIGRP network could not access the external Internet.
+* **Cause**: EIGRP does not automatically redistribute external default routes (e.g., `O*E2`) learned from OSPF.
+* **Solution**:
+    * Applied the `ip summary-address eigrp` command on the ASBR.
+    * **Outcome**: Successfully propagated the default route to the EIGRP domain, restoring Internet connectivity.
+
+---
+
+## 🛠️ Tech Stack & Skills
+* **Network Simulation**: Cisco Packet Tracer
+* **Routing Protocols**: OSPF, EIGRP, Static Routing
+* **Switching & HA**: VLAN, Trunking, EtherChannel, HSRP
+* **Security**: Standard/Extended ACL, Port Security
+
+---
+
+# 📖 Detailed Technical Reference
+
+## 1\. 🎯 Project Overview
+
+This project is a **complex routing-based enterprise internal network simulation** that integrates OSPF Multi-Area and EIGRP Autonomous Systems (AS), along with centralized NAT and HSRP gateway redundancy.
+
+The goal is to simulate a real-world scenario where enterprise networks using different routing protocols — resulting from M&A (Mergers & Acquisitions) — are unified under a single architecture with High Availability (HA) and security policies applied.
+
+### 1.1. 📍 Final Architecture
+
+The network consists of 3 independent routing domains and 1 internet gateway.
+
+| Zone | Devices | Protocol | Role |
 | :---: | :---: | :---: | :--- |
-| **백본 (Core)** | R0, R1, R2, R3, R4 | **OSPF Area 0** | 네트워크의 고속 백본 (Core) |
-| **인터넷 게이트웨이** | R4 | **NAT / OSPF** | 중앙 집중식 인터넷 접속 및 기본 경로 전파 |
-| **지사 그룹 1** | R3, R5, R7, R9 | **EIGRP 100** | OSPF와 재분배되는 지사 그룹 (ASBR) |
-| **지사 그룹 2** | R2, L3\_Sw8, L3\_Sw6 | **OSPF Area 1** | HSRP 이중화 지사 (ABR) |
+| **Backbone (Core)** | R0, R1, R2, R3, R4 | **OSPF Area 0** | High-speed network backbone (Core) |
+| **Internet Gateway** | R4 | **NAT / OSPF** | Centralized internet access & default route propagation |
+| **Branch Group 1** | R3, R5, R7, R9 | **EIGRP 100** | Branch group redistributed with OSPF (ASBR) |
+| **Branch Group 2** | R2, L3\_Sw8, L3\_Sw6 | **OSPF Area 1** | HSRP-redundant branch (ABR) |
 
-### 1.2. 🚀 핵심 구현 기술
+### 1.2. 🚀 Key Implementation Technologies
 
-  * **라우팅 재분배 (Redistribution):** `R3`(ASBR)에서 OSPF $\leftrightarrow$ EIGRP 양방향 재분배
-  * **OSPF 멀티 에어리어:** `R2`(ABR)를 통한 Area 0 (백본)과 Area 1 (지사) 분리
-  * **고가용성 (HSRP):** `L3_Switch_8/6`에서 SVI를 이용한 VLAN별 HSRP Load Balancing
-  * **NAT (PAT):** `R4`에서 ROAS를 이용한 중앙 집중식 인터넷 게이트웨이
-  * **L2 보안:** `Switch12` 및 하위 스위치에 Native VLAN(999)을 적용하여 L2 충돌 해결
-  * **보안 (ACL):** `VLAN 81 (Guest)`이 인터넷(`8.8.8.8`)만 접속하도록 ACL 정책 적용
-
------
-
-## 아키텍처 다이어그램
-![시스템 다이어그램](images/diagram.png)
+  * **Route Redistribution:** Bidirectional OSPF ↔ EIGRP redistribution at `R3` (ASBR)
+  * **OSPF Multi-Area:** Separation of Area 0 (backbone) and Area 1 (branch) via `R2` (ABR)
+  * **High Availability (HSRP):** Per-VLAN HSRP Load Balancing using SVIs on `L3_Switch_8/6`
+  * **NAT (PAT):** Centralized internet gateway using ROAS at `R4`
+  * **L2 Security:** Native VLAN (999) applied to `Switch12` and downstream switches to resolve L2 conflicts
+  * **Security (ACL):** ACL policy restricting `VLAN 81 (Guest)` to internet-only access (`8.8.8.8`)
 
 -----
 
-## 2\. 🐛 주요 트러블슈팅 및 해결 과정 (Lessons Learned)
-
-
-### 2.1. 문제 1: EIGRP $\leftrightarrow$ OSPF 간 인터넷 경로 전파 실패
-
-  * **증상:** EIGRP 지사(`R5`)에서 `ping 8.8.8.8` (인터넷) 시 `Destination host unreachable`.
-  * **원인:** `R4` (NAT GW)가 광고한 기본 경로(`O*E2 0.0.0.0/0`)를 `R3` (ASBR)가 OSPF로 학습했지만, EIGRP로 재분배하지 않았습니다. EIGRP는 기본적으로 기본 경로를 재분배하지 않습니다.
-  * **해결:** `R3`의 EIGRP 인터페이스(`Gi0/2`)에 `ip summary-address eigrp 100 0.0.0.0 0.0.0.0` 명령어를 추가하여 EIGRP 영역으로 기본 경로를 강제 주입했습니다.
-
-### 2.2. 문제 2: HSRP "스플릿 브레인" (Split-Brain)
-
-  * **증상:** `R8`과 `R6`의 `show standby brief` 출력에서 `Standby unknown`이 표시되고, 두 라우터가 모두 `Active` 상태를 주장했습니다.
-  * **원인 (Packet Tracer 한계):** `1941` 라우터는 `vlan` 데이터베이스 명령어를 지원하지 않아 `encapsulation dot1Q` (ROAS)가 정상 작동하지 않았습니다. 이로 인해 `Switch12`와 `Native VLAN Mismatch`가 발생하여 HSRP Hello 패킷이 폐기(Drop)되었습니다.
-  * **해결:** HSRP 게이트웨이 장비를 `1941 라우터`에서 \*\*`Layer 3 스위치 (3560/3650)`\*\*로 교체했습니다. \*\*SVI (`interface Vlan80`)\*\*를 사용하여 HSRP를 구성함으로써 ROAS의 한계를 극복하고 즉시 문제를 해결했습니다.
-
-### 2.3. 문제 3: OSPF Area 1 $\leftrightarrow$ EIGRP 통신 실패
-
-  * **증상:** `R8` (OSPF Area 1) PC에서 `R5` (EIGRP) PC로 핑 실패 (`Request timed out`).
-  * **원인:** OSPF Area 1을 `stub` 영역으로 설정했기 때문입니다. OSPF Stub Area는 외부 경로(`O E2`)를 차단하므로, `R3` (ASBR)가 재분배한 EIGRP 경로(`O E2 192.168.5.0` 등)가 `R2` (ABR)에서 차단되었습니다.
-  * **해결:** OSPF Area 1을 `stub`에서 \*\*"Normal Area" (표준 영역)\*\*로 변경(`no area 1 stub`)하여, EIGRP 외부 경로가 Area 1까지 학습되도록 허용했습니다.
+## Architecture Diagram
+![System Diagram](images/diagram.png)
 
 -----
 
-## 3\. 💾 최종 설정 스크립트 (Final Configuration)
+## 2\. 🐛 Key Troubleshooting & Lessons Learned
+
+### 2.1. Issue 1: Internet Route Propagation Failure Between EIGRP ↔ OSPF
+
+  * **Symptom:** `Destination host unreachable` when pinging `8.8.8.8` (internet) from EIGRP branch (`R5`).
+  * **Root Cause:** `R3` (ASBR) learned the default route (`O*E2 0.0.0.0/0`) advertised by `R4` (NAT GW) via OSPF, but did not redistribute it into EIGRP. EIGRP does not redistribute default routes by default.
+  * **Resolution:** Added `ip summary-address eigrp 100 0.0.0.0 0.0.0.0` on `R3`'s EIGRP interface (`Gi0/2`) to force-inject the default route into the EIGRP domain.
+
+### 2.2. Issue 2: HSRP "Split-Brain"
+
+  * **Symptom:** `show standby brief` on both `R8` and `R6` showed `Standby unknown`, with both routers claiming `Active` state.
+  * **Root Cause (Packet Tracer Limitation):** The `1941` router does not support the `vlan` database command, causing `encapsulation dot1Q` (ROAS) to malfunction. This resulted in a `Native VLAN Mismatch` with `Switch12`, causing HSRP Hello packets to be dropped.
+  * **Resolution:** Replaced the HSRP gateway devices from `1941 routers` to **`Layer 3 Switches (3560/3650)`**. Configured HSRP using **SVIs (`interface Vlan80`)**, overcoming the ROAS limitation and immediately resolving the issue.
+
+### 2.3. Issue 3: Communication Failure Between OSPF Area 1 ↔ EIGRP
+
+  * **Symptom:** Ping failed (`Request timed out`) from `R8` (OSPF Area 1) PC to `R5` (EIGRP) PC.
+  * **Root Cause:** OSPF Area 1 was configured as a `stub` area. OSPF Stub Areas block external routes (`O E2`), so the EIGRP routes (`O E2 192.168.5.0`, etc.) redistributed by `R3` (ASBR) were blocked at `R2` (ABR).
+  * **Resolution:** Changed OSPF Area 1 from `stub` to a **"Normal Area"** (`no area 1 stub`), allowing EIGRP external routes to be learned within Area 1.
+
+-----
+
+## 3\. 💾 Final Configuration Scripts
 
 ### 3.1. R4 (Internet GW / NAT)
 
@@ -126,7 +188,7 @@ ip nat inside source list ACL_FOR_NAT interface GigabitEthernet0/2.200 overload
 end
 ```
 
-### 3.2. R3 (ASBR: OSPF $\leftrightarrow$ EIGRP)
+### 3.2. R3 (ASBR: OSPF ↔ EIGRP)
 
 ```cisco
 hostname Router3
@@ -165,7 +227,7 @@ router eigrp 100
 end
 ```
 
-### 3.3. R2 (ABR: OSPF Area 0 $\leftrightarrow$ Area 1)
+### 3.3. R2 (ABR: OSPF Area 0 ↔ Area 1)
 
 ```cisco
 hostname Router2
